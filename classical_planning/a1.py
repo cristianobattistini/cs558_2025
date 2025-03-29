@@ -10,7 +10,7 @@ p.connect(p.GUI)
 p.setAdditionalSearchPath(pybullet_data.getDataPath())
 
 plane = p.loadURDF("plane.urdf")
-p.setGravity(0,0,-9.8)
+p.setGravity(0,0,-9.81)
 p.setTimeStep(1./500)
 #p.setDefaultContactERP(0)
 #urdfFlags = p.URDF_USE_SELF_COLLISION+p.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS

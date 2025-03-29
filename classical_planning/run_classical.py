@@ -1,52 +1,30 @@
-import pybullet as p
-import pybullet_data
-import time
-import os
+from environment import A1Simulation
 
+def main():
+    # Initialize the simulation with GUI enabled
+    sim = A1Simulation(gui=True, time_step=1. / 50.)
 
-# 1) Connect to PyBullet
-p.connect(p.GUI)
+    # Step the simulation for 100 steps
+    print("Stepping the simulation...")
+    sim.step_simulation(steps=100)
 
-# 2) Add PyBullet's default data (plane, etc.) to search path
-p.setAdditionalSearchPath(pybullet_data.getDataPath())
+    # Retrieve and print joint states
+    print("Retrieving joint states...")
+    joint_states = sim.get_joint_states()
+    for i, (position, velocity) in enumerate(joint_states):
+        print(f"Joint {i}: Position={position}, Velocity={velocity}")
 
-# 5) Load the ground plane
-plane_id = p.loadURDF("plane.urdf")
+    # Reset the robot to its initial state
+    print("Resetting the robot...")
+    sim.reset_robot()
 
+    # Step the simulation again after reset
+    print("Stepping the simulation after reset...")
+    sim.step_simulation(steps=50)
 
-# 3) The directory of this script: "CS558_2025/classical_planning"
-current_dir = os.path.dirname(__file__)
+    # Disconnect from the simulation
+    print("Disconnecting from the simulation...")
+    sim.disconnect()
 
-# 4) Add your "assets/a1" folder to PyBullet's search path
-#    so that any relative paths (like "../meshes/") in the URDF can be resolved.
-p.setAdditionalSearchPath(os.path.join(current_dir, '../assets/a1'))
-
-
-# 6) Construct the path to a1.urdf (inside "assets/a1/urdf/")
-a1_urdf_path = os.path.join(current_dir, '../assets/a1/urdf/a1.urdf')
-
-# 7) Load the A1 robot at the start position/orientation
-start_position = [0, 0, 0.48]
-start_orientation = p.getQuaternionFromEuler([0, 0, 0])
-robot_id = p.loadURDF(a1_urdf_path, start_position, start_orientation)
-
-# 8) Create a dynamic obstacle (cube)
-col_cube_id = p.createCollisionShape(p.GEOM_BOX, halfExtents=[0.5, 0.5, 0.5])
-vis_cube_id = p.createVisualShape(
-    p.GEOM_BOX, halfExtents=[0.5, 0.5, 0.5], rgbaColor=[1, 0, 0, 1]
-)
-cube_id = p.createMultiBody(
-    baseMass=1,
-    baseCollisionShapeIndex=col_cube_id,
-    baseVisualShapeIndex=vis_cube_id,
-    basePosition=[2, 2, 0.5]
-)
-
-# 9) Set an initial velocity for the obstacle
-p.resetBaseVelocity(cube_id, linearVelocity=[-1, 0, 0])
-
-# 10) Run the simulation
-for _ in range(1000):
-    p.stepSimulation()
-    time.sleep(1./240.)
-
+if __name__ == "__main__":
+    main()
