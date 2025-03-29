@@ -2,6 +2,7 @@ import pybullet as p
 import pybullet_data
 import time
 import os
+from maze_generator import MazeGenerator
 
 class A1Simulation:
     def __init__(self, gui=True, plane="plane.urdf", time_step=1. / 240. ):
@@ -10,6 +11,11 @@ class A1Simulation:
         # Start PyBullet in GUI (Visuals on) or Direct mode (Visuals off)
         self.gui = gui
         self.client = p.connect(p.GUI if gui else p.DIRECT) 
+        p.configureDebugVisualizer(p.COV_ENABLE_GUI, 0)              # Hide side debug sliders
+        p.configureDebugVisualizer(p.COV_ENABLE_SEGMENTATION_MARK_PREVIEW, 0)
+        p.configureDebugVisualizer(p.COV_ENABLE_DEPTH_BUFFER_PREVIEW, 0)
+        p.configureDebugVisualizer(p.COV_ENABLE_RGB_BUFFER_PREVIEW, 0)
+
 
         # Set search path for default URDFs and assets
         current_dir = os.path.dirname(__file__) # Get the directory of this script
@@ -59,6 +65,58 @@ class A1Simulation:
         num_joints = p.getNumJoints(self.robot_id)
         for i in range(num_joints):
             p.resetJointState(self.robot_id, i, targetValue=0, targetVelocity=0)
+
+    def create_maze(self, rows=10, cols=10, cell_size=1.2):
+        """Use MazeGenerator to build maze and reset robot at start position."""
+        maze = MazeGenerator(rows=rows, cols=cols, cell_size=cell_size, seed=42)
+        start_pos, end_pos = maze.create_maze()
+
+        self.reset_robot()
+        p.resetBasePositionAndOrientation(self.robot_id, start_pos, [0, 0, 0, 1])
+        
+        return start_pos, end_pos
+    
+    def zoom_camera(self, direction, step=0.5):
+        cam = p.getDebugVisualizerCamera()
+        current_distance = cam[10]
+        yaw = cam[8]
+        pitch = cam[9]
+        target = cam[11]
+
+        if direction == "in":
+            new_distance = max(1.0, current_distance - step)
+        elif direction == "out":
+            new_distance = current_distance + step
+        else:
+            return  # unknown direction, do nothing
+
+        p.resetDebugVisualizerCamera(cameraDistance=new_distance, cameraYaw=yaw, cameraPitch=pitch, cameraTargetPosition=target)
+
+    def handle_keyboard_zoom(self):
+            keys = p.getKeyboardEvents()
+
+            if ord('z') in keys and keys[ord('z')] & p.KEY_WAS_TRIGGERED:
+                self.zoom_camera("in")
+            if ord('x') in keys and keys[ord('x')] & p.KEY_WAS_TRIGGERED:
+                self.zoom_camera("out")
+            if 27 in keys and keys[27] & p.KEY_WAS_TRIGGERED:
+                print("Exiting simulation...")
+                p.disconnect()
+                exit()
+
+    def teleport_robot(self, position, orientation=[0, 0, 0, 1]):
+        """Teleport the robot base to a specific position and orientation."""
+        p.resetBasePositionAndOrientation(self.robot_id, position, orientation)
+
+    def create_maze(self, rows=10, cols=10, cell_size=1.2):
+        """Use MazeGenerator to build maze and reset robot at start position."""
+        maze = MazeGenerator(rows=rows, cols=cols, cell_size=cell_size, seed=42)
+        start_pos, end_pos, obstacles = maze.create_maze()
+
+        self.reset_robot()
+        self.teleport_robot([start_pos[0], start_pos[1], 0.3])
+
+        return start_pos, end_pos, obstacles
 
     def disconnect(self):
         """Disconnect PyBullet simulation."""
