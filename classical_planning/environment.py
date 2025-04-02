@@ -35,6 +35,7 @@ class A1Simulation:
 
         # Robot parameters
         self.num_joints = p.getNumJoints(self.robot_id) # Number of joints in the robot
+        self.joint_indices = self.get_joint_indices()
 
     
     def load_plane(self, plane):
@@ -163,3 +164,102 @@ class A1Simulation:
     def disconnect(self):
         """Disconnect PyBullet simulation."""
         p.disconnect()
+
+    
+    def get_base_state(self):
+        """Get robot base (torso) position, orientation, and velocity."""
+        # Position and Orientation of the torso. Position of CoM in Cartesian world coordinates, orientation in [x,y,z,w] from the world frame to the object's local frame.
+        pos, orn = p.getBasePositionAndOrientation(self.robot_id)  
+        # Linear and Angular velocity. Linear velocity of the CoM is in the world frame. Angular velocity is in ref to the torso.
+        vel, ang_vel = p.getBaseVelocity(self.robot_id)
+        return pos, orn, vel, ang_vel
+    
+    def get_foot_link_indices(self):
+        """Find and return the link indices for the robot's feet."""
+        foot_names = ["FR_foot", "FL_foot", "RR_foot", "RL_foot"]
+        foot_indices = {}
+
+        for foot_name in foot_names:
+            foot_index = -1
+            for i in range(p.getNumJoints(self.robot_id)):
+                info = p.getJointInfo(self.robot_id, i)
+                link_name = info[12].decode('utf-8')
+                if link_name == foot_name:
+                    foot_index = info[0]
+                    break
+
+            if foot_index == -1:
+                print(f"Warning: Foot link '{foot_name}' not found in URDF.")
+            else:
+                foot_indices[foot_name] = foot_index
+
+        return foot_indices
+
+    def get_contact_points(self, threshold=0.01):
+        """Check if feet are in contact with the ground (force > threshold)."""
+        foot_indices = self.get_foot_link_indices()
+        contacts = []
+
+        for foot_name, foot_index in foot_indices.items():
+            if foot_index == -1:
+                contacts.append(False)
+                continue
+
+            contact = p.getContactPoints(self.robot_id, self.plane_id, linkIndexA=foot_index)
+
+            if contact and len(contact) > 0 and contact[0][9] > threshold:
+                contacts.append(True)
+            else:
+                contacts.append(False)
+
+        return np.array(contacts)  # [FR, FL, RR, RL]
+    
+    def compute_foot_positions(self):
+        """Return the 3D positions of the robot's feet in the world's frame."""
+        foot_indices = self.get_foot_link_indices()
+        foot_positions = []
+        # Order of feet: FR, FL, RR, RL
+        for foot_name in ["FR_foot", "FL_foot", "RR_foot", "RL_foot"]:
+            if foot_name not in foot_indices:
+                print(f"Error: {foot_name} index not found.")
+                return []
+            foot_index = foot_indices[foot_name]
+            foot_state = p.getLinkState(self.robot_id, foot_index)
+            foot_pos = foot_state[0]  # World position of the foot link's CoM
+    
+            foot_positions.append(foot_pos)
+        
+        return foot_positions
+    
+    def get_joint_indices(self):
+        """Map joint names to indices."""
+        joint_indices = []
+        joint_names = [
+            "FR_hip_joint", "FR_thigh_joint", "FR_calf_joint",
+            "FL_hip_joint", "FL_thigh_joint", "FL_calf_joint",
+            "RR_hip_joint", "RR_thigh_joint", "RR_calf_joint",
+            "RL_hip_joint", "RL_thigh_joint", "RL_calf_joint"
+        ]
+        for name in joint_names:
+            for i in range(self.num_joints):
+                info = p.getJointInfo(self.robot_id, i)
+                if info[1].decode("utf-8") == name:
+                    joint_indices.append(i)
+                    break
+        return joint_indices
+
+    def get_joint_angles(self):
+        """Returns a 12D np.ndarray of joint angles in radians, ordered as:
+        [FR_hip, FR_thigh, FR_calf, FL_hip, FL_thigh, FL_calf, RR_hip, RR_thigh, RR_calf, RL_hip, RL_thigh, RL_calf]."""
+        joint_states = p.getJointStates(self.robot_id, self.joint_indices)
+        return np.array([state[0] for state in joint_states])
+    
+    def set_joint_torques(self, torques):
+        """Applies torques to all 12 joints."""
+        for i, joint_idx in enumerate(self.joint_indices):
+            p.setJointMotorControl2(
+                bodyUniqueId=self.robot_id,
+                jointIndex=joint_idx,
+                controlMode=p.TORQUE_CONTROL,
+                force=torques[i]
+            )    
