@@ -8,8 +8,11 @@ class RRT_Node:
         self.conf = conf
         self.parent = None
         self.children = []
+        self.cost = float("inf")  # cost from start to this node
+
     def set_parent(self, parent):
         self.parent = parent
+
     def add_child(self, child):
         self.children.append(child)
 
@@ -100,7 +103,6 @@ def is_box_collision(conf, obstacles, robot_dims):
     # For each obstacle, obtain its AABB and check for overlap in x and y.
     for obs in obstacles:
         obs_min, obs_max = p.getAABB(obs)
-        # Check overlap in the x-y plane.
         if (max_xy[0] >= obs_min[0] and min_xy[0] <= obs_max[0] and
             max_xy[1] >= obs_min[1] and min_xy[1] <= obs_max[1]):
             return True
@@ -115,35 +117,71 @@ def extract_path(goal_node):
     path.reverse()
     return path
 
-def run_rrt(start_conf, goal_conf, obstacles, maze_bounds, robot_dims,
-            max_iter=20000, goal_threshold=0.6):
+def run_rrt_star(start_conf, goal_conf, obstacles, maze_bounds, robot_dims,
+                 max_iter=20000, goal_threshold=0.6, step_size=0.5):
     """
-    Run RRT planner to find a path from start_conf to goal_conf.
-    
+    Run RRT* planner to find a path from start_conf to goal_conf.
+
     Parameters:
       start_conf, goal_conf: tuples (x, y, theta)
-      obstacles: list of pybullet body ids to check against.
+      obstacles: list of PyBullet body ids to check collisions against.
       maze_bounds: (min_x, max_x, min_y, max_y)
       robot_dims: (length, width, height) of the robot's box.
-      goal_threshold: distance threshold to consider the goal reached.
+      goal_threshold: distance threshold (in x,y) to consider the goal reached.
+      step_size: maximum step distance for new nodes.
     """
     start_node = RRT_Node(start_conf)
+    start_node.cost = 0.0
     tree = [start_node]
+    
     for _ in range(max_iter):
+        # Sample a new configuration
         rand_conf = sample_conf(goal_conf, maze_bounds)
         rand_node = RRT_Node(rand_conf)
+        
+        # Find nearest node in the tree
         nearest_node = find_nearest(rand_node, tree)
-        new_node = steer_to(rand_conf, nearest_node)
+        new_node = steer_to(rand_conf, nearest_node, step_size)
+        
+        # Skip if the path from nearest to new node is in collision.
         if check_collision_path(nearest_node.conf, new_node.conf, obstacles, robot_dims):
             continue
+        
+        # Initialize new_node's cost and set nearest_node as parent.
+        new_node.cost = nearest_node.cost + math.dist(nearest_node.conf[:2], new_node.conf[:2])
         new_node.set_parent(nearest_node)
-        nearest_node.add_child(new_node)
+        
+        # Define a neighbor radius (could be made adaptive; here we use a constant)
+        neighbor_radius = step_size * 2.0
+        neighbors = [node for node in tree 
+                     if math.dist(node.conf[:2], new_node.conf[:2]) < neighbor_radius]
+        
+        # Choose the best parent from neighbors (if collision-free)
+        for neighbor in neighbors:
+            if not check_collision_path(neighbor.conf, new_node.conf, obstacles, robot_dims):
+                cost = neighbor.cost + math.dist(neighbor.conf[:2], new_node.conf[:2])
+                if cost < new_node.cost:
+                    new_node.cost = cost
+                    new_node.set_parent(neighbor)
+        
+        # Add new_node to the tree.
         tree.append(new_node)
+        
+        # Rewire the tree: try to improve the cost to neighbors through new_node.
+        for neighbor in neighbors:
+            if neighbor == new_node.parent:
+                continue
+            if not check_collision_path(new_node.conf, neighbor.conf, obstacles, robot_dims):
+                cost_through_new = new_node.cost + math.dist(new_node.conf[:2], neighbor.conf[:2])
+                if cost_through_new < neighbor.cost:
+                    neighbor.set_parent(new_node)
+                    neighbor.cost = cost_through_new
+        
         # Check if new_node is near the goal.
-        dist_to_goal = math.dist((new_node.conf[0], new_node.conf[1]),
-                                  (goal_conf[0], goal_conf[1]))
-        if dist_to_goal < goal_threshold:
-            print("[RRT] Goal reached!")
+        if math.dist(new_node.conf[:2], goal_conf[:2]) < goal_threshold:
+            print("[RRT*] Goal reached!")
             return extract_path(new_node)
-    print("[RRT] Failed to find a path.")
+            
+    print("[RRT*] Failed to find a path.")
     return None
+

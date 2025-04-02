@@ -108,5 +108,86 @@ class MazeGenerator:
         grid, start_cell, end_cell = self.generate_maze_grid()
         self.create_maze_in_simulation(grid)
         return self.get_world_position(start_cell), self.get_world_position(end_cell), self.obstacle_ids
+    
+
+    def create_simplified_maze(self):
+        """
+        Create a simplified maze by placing multiple block obstacles.
+        The obstacles are arranged in two parallel rows, creating a corridor 
+        in the middle that the robot must navigate through or around.
+        
+        Returns:
+            Tuple[List[float], List[float], List[int]]: 
+                (start_pos, goal_pos, obstacle_ids)
+        """
+        # Clear any previously stored obstacles
+        self.obstacle_ids = []
+
+        # For best results, pick a cell_size that’s wide enough for your robot
+        # (e.g., 1.0 or 1.2 if your robot trunk is ~0.2 m wide).
+        # We'll define two rows of blocks: top row (y = +1 * cell_size), bottom row (y = -1 * cell_size).
+        # That leaves a corridor in the middle (y ~ 0).
+
+        # You can adjust how many blocks and how far in x they go.
+        block_positions = [
+            # Row +2
+            [self.cell_size * 2,  self.cell_size * 2, self.wall_height / 2],
+            [self.cell_size * 5,  self.cell_size * 2, self.wall_height / 2],
+
+            [self.cell_size * 2,  0, self.wall_height / 2],
+            [self.cell_size * 4,  0, self.wall_height / 2],
+            [self.cell_size * 6,  0, self.wall_height / 2],
+
+            [self.cell_size * 2, -self.cell_size * 2, self.wall_height / 2],
+            [self.cell_size * 4, -self.cell_size * 2, self.wall_height / 2],
+        ]
 
 
+
+        for pos in block_positions:
+            size = [self.cell_size / 2, self.cell_size / 2, self.wall_height / 2]
+            col_shape = p.createCollisionShape(p.GEOM_BOX, halfExtents=size)
+            vis_shape = p.createVisualShape(p.GEOM_BOX, halfExtents=size, rgbaColor=[0.7, 0.7, 0.7, 1])
+            body_id = p.createMultiBody(baseMass=0,
+                                        baseCollisionShapeIndex=col_shape,
+                                        baseVisualShapeIndex=vis_shape,
+                                        basePosition=pos)
+            self.obstacle_ids.append(body_id)
+
+        # Place the start on the left side of the corridor and the goal on the right.
+        # Adjust if you want them closer/farther from the blocks.
+        start_pos = [0, 0, 0.3]
+        goal_pos  = [self.cell_size * 7.5, 0, 0.3]  # a bit beyond the last blocks
+
+        return start_pos, goal_pos, self.obstacle_ids
+
+
+
+
+'''
+
+        block_positions = [
+            # Row +2
+            [self.cell_size * 2,  self.cell_size * 2, self.wall_height / 2],
+            [self.cell_size * 5,  self.cell_size * 2, self.wall_height / 2],
+
+            # Row +1
+            # [self.cell_size * 3,  self.cell_size * 1, self.wall_height / 2],
+            # [self.cell_size * 6,  self.cell_size * 1, self.wall_height / 2],
+
+            # Row 0 (center line)
+            [self.cell_size * 2,  0, self.wall_height / 2],
+            [self.cell_size * 4,  0, self.wall_height / 2],
+            [self.cell_size * 6,  0, self.wall_height / 2],
+
+            # Row -1
+            # [self.cell_size * 3, -self.cell_size * 1, self.wall_height / 2],
+            # [self.cell_size * 5, -self.cell_size * 1, self.wall_height / 2],
+
+            # Row -2
+            [self.cell_size * 2, -self.cell_size * 2, self.wall_height / 2],
+            [self.cell_size * 4, -self.cell_size * 2, self.wall_height / 2],
+        ]
+
+
+'''

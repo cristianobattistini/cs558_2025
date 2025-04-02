@@ -3,6 +3,9 @@ import pybullet_data
 import time
 import os
 from maze_generator import MazeGenerator
+import numpy as np
+import math
+
 
 class A1Simulation:
     def __init__(self, gui=True, plane="plane.urdf", time_step=1. / 240. ):
@@ -65,16 +68,6 @@ class A1Simulation:
         num_joints = p.getNumJoints(self.robot_id)
         for i in range(num_joints):
             p.resetJointState(self.robot_id, i, targetValue=0, targetVelocity=0)
-
-    def create_maze(self, rows=10, cols=10, cell_size=1.2):
-        """Use MazeGenerator to build maze and reset robot at start position."""
-        maze = MazeGenerator(rows=rows, cols=cols, cell_size=cell_size, seed=42)
-        start_pos, end_pos = maze.create_maze()
-
-        self.reset_robot()
-        p.resetBasePositionAndOrientation(self.robot_id, start_pos, [0, 0, 0, 1])
-        
-        return start_pos, end_pos
     
     def zoom_camera(self, direction, step=0.5):
         cam = p.getDebugVisualizerCamera()
@@ -110,13 +103,62 @@ class A1Simulation:
 
     def create_maze(self, rows=10, cols=10, cell_size=1.2):
         """Use MazeGenerator to build maze and reset robot at start position."""
-        maze = MazeGenerator(rows=rows, cols=cols, cell_size=cell_size, seed=42)
-        start_pos, end_pos, obstacles = maze.create_maze()
+        maze = MazeGenerator(rows=rows, cols=cols, cell_size=cell_size)
+        start_pos, end_pos, obstacles = maze.create_simplified_maze()
 
         self.reset_robot()
         self.teleport_robot([start_pos[0], start_pos[1], 0.3])
 
         return start_pos, end_pos, obstacles
+    
+
+    def move_robot_along_segment(self, start_conf, end_conf, steps=20):
+        """
+        Move the robot smoothly from start_conf to end_conf by interpolating 
+        position and orientation.
+        Each conf is (x, y, theta), where theta is the rotation about z.
+        """
+        xs = np.linspace(start_conf[0], end_conf[0], steps)
+        ys = np.linspace(start_conf[1], end_conf[1], steps)
+        thetas = np.linspace(start_conf[2], end_conf[2], steps)
+        
+        for x, y, theta in zip(xs, ys, thetas):
+            # Compute quaternion from theta (assuming no roll or pitch)
+            orn = p.getQuaternionFromEuler([0, 0, theta])
+            # Pass both position and orientation to teleport_robot.
+            # If your teleport_robot doesn't currently accept orientation,
+            # you can modify it accordingly:
+            # def teleport_robot(self, pos, orn):
+            #     p.resetBasePositionAndOrientation(self.robot_id, pos, orn)
+            self.teleport_robot([x, y, 0.3], orn)
+            self.step_simulation(steps=5)
+
+
+    def visualize_path(self, path, color=[1, 0, 0], line_width=2.0, z_offset=0.02):
+        """
+        Draws a series of red line segments connecting each waypoint in 'path'.
+
+        path: list of configurations (x, y, theta) or (x, y) in order
+        color: (R, G, B) color of the debug line
+        line_width: thickness of the line
+        z_offset: how high above the ground to draw the line (to avoid z-fighting)
+        """
+        for i in range(len(path) - 1):
+            (x1, y1, *_) = path[i]
+            (x2, y2, *_) = path[i + 1]
+            start = [x1, y1, z_offset]
+            end = [x2, y2, z_offset]
+            p.addUserDebugLine(start, end, lineColorRGB=color, lineWidth=line_width, lifeTime=0)
+
+
+    def compute_path_length(self, path):
+        total_length = 0.0
+        for i in range(len(path) - 1):
+            x1, y1 = path[i][0], path[i][1]
+            x2, y2 = path[i+1][0], path[i+1][1]
+            segment_length = math.dist((x1, y1), (x2, y2))
+            total_length += segment_length
+        return total_length
 
     def disconnect(self):
         """Disconnect PyBullet simulation."""
