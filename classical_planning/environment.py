@@ -5,6 +5,8 @@ import os
 from maze_generator import MazeGenerator
 import numpy as np
 import math
+from scipy.spatial.transform import Rotation as R
+import cv2
 
 
 class A1Simulation:
@@ -35,7 +37,7 @@ class A1Simulation:
 
         # Robot parameters
         self.num_joints = p.getNumJoints(self.robot_id) # Number of joints in the robot
-        self.joint_indices = self.get_joint_indices()
+        self.wheel_indices = self.get_wheel_joint_indices() # Get wheel joint indices
 
     
     def load_plane(self, plane):
@@ -45,8 +47,8 @@ class A1Simulation:
     
     def load_robot(self, current_dir, start_pos=[0, 0, 0.3]):
         """Load the A1 quadruped robot."""
-        a1_urdf = os.path.join(current_dir, '../assets/a1/urdf/a1.urdf')  # Path to the A1 URDF
-        return p.loadURDF(a1_urdf, basePosition=start_pos)
+        urdf = os.path.join(current_dir, '../assets/a1/urdf/roomba.urdf')  # Path to the A1 URDF
+        return p.loadURDF(urdf, basePosition=start_pos)
 
     def step_simulation(self, steps=1):
         """Step the simulation forward a certain number of steps."""
@@ -55,13 +57,6 @@ class A1Simulation:
             if self.gui:
                 time.sleep(self.time_step)  # Only sleep if using GUI to sync real-time movement
 
-    def get_joint_states(self):
-        """Retrieve all joint positions and velocities."""
-        joint_states = []
-        for i in range(self.num_joints):
-            joint_state = p.getJointState(self.robot_id, i)[:2] # The full joint state: (position, velocity, forces and torques, applied_motor_torque)
-            joint_states.append(joint_state)
-        return joint_states  # Returns (position, velocity) tuples
 
     def reset_robot(self):
         """Reset robot position and velocity."""
@@ -98,9 +93,29 @@ class A1Simulation:
                 p.disconnect()
                 exit()
 
-    def teleport_robot(self, position, orientation=[0, 0, 0, 1]):
+    def teleport_robot(self, position,axis='d' , angle=0):
         """Teleport the robot base to a specific position and orientation."""
-        p.resetBasePositionAndOrientation(self.robot_id, position, orientation)
+
+        if axis == 'z':
+            # Rotate around the Z-axis 
+            axi = np.array([0, 0, 1])
+        elif axis == 'y':
+            # Rotate around the Y-axis 
+            axi = np.array([0, 1, 0]) 
+        elif axis == 'x':
+            # Rotate around the X-axis 
+            axi = np.array([1, 0, 0])       
+        else:
+            # Default to no rotation
+            p.resetBasePositionAndOrientation(self.robot_id, position,[0,0,0,1])
+            return
+
+
+        degrees = np.radians(angle)  # Convert degrees to radians
+        quat = R.from_rotvec(degrees * axi).as_quat()  # [x, y, z, w] format       
+        p.resetBasePositionAndOrientation(self.robot_id, position, quat)
+        return
+
 
     def create_maze(self, rows=10, cols=10, cell_size=1.2):
         """Use MazeGenerator to build maze and reset robot at start position."""
@@ -165,15 +180,93 @@ class A1Simulation:
         """Disconnect PyBullet simulation."""
         p.disconnect()
 
-    
+    # New Robot functions
+    def get_wheel_joint_indices(self):
+        """
+        Find and return the joint indices for the robot's wheels.
+            
+        Returns:
+            dict: {'left': joint_index, 'right': joint_index}
+        """
+        wheel_names = ["left_wheel_rot_joint", "right_wheel_rot_joint"]  # Names from URDF
+        wheel_indices = {}
+        
+        for wheel_name in wheel_names:
+            wheel_index = -1
+            for i in range(self.num_joints):
+                info = p.getJointInfo(self.robot_id, i)
+                joint_name = info[1].decode('utf-8')  # Joint name is index 1 in JointInfo
+                if joint_name == wheel_name:
+                    wheel_index = info[0]  # Joint index is index 0 in JointInfo
+                    break
+            
+            if wheel_index == -1:
+                print(f"Warning: Wheel joint '{wheel_name}' not found in URDF.")
+            else:
+                wheel_indices[wheel_name.split('_')[0]] = wheel_index  # 'left' or 'right'
+        return wheel_indices
+
     def get_base_state(self):
-        """Get robot base (torso) position, orientation, and velocity."""
-        # Position and Orientation of the torso. Position of CoM in Cartesian world coordinates, orientation in [x,y,z,w] from the world frame to the object's local frame.
+        """Get robot base [x, y, theta, left_omega, right_omega]. All respect the world frame"""
+        # Position  and Orientation
         pos, orn = p.getBasePositionAndOrientation(self.robot_id)  
-        # Linear and Angular velocity. Linear velocity of the CoM is in the world frame. Angular velocity is in ref to the torso.
-        vel, ang_vel = p.getBaseVelocity(self.robot_id)
-        return pos, orn, vel, ang_vel
+        x, y = pos[0], pos[1]
+        theta = p.getEulerFromQuaternion(orn)[2]
+       
+        # Get wheel velocities 
+        left_wheel_vel = p.getJointState(self.robot_id, self.wheel_indices['left'])[1]
+        right_wheel_vel = p.getJointState(self.robot_id, self.wheel_indices['right'])[1]
+
+        return np.array([x, y, theta, left_wheel_vel, right_wheel_vel])
     
+    def setup_video_recording(self,video_path,fps):
+        width, height = 640, 480
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        out = cv2.VideoWriter(video_path, fourcc, fps, (width, height)) 
+        return out 
+
+    def get_video_frame(self, width=640, height=480):
+        _, _, img, _, _ = p.getCameraImage(width, height)                         # Get camera image
+        frame = np.array(img, dtype=np.uint8).reshape(height, width, 4)[:, :, :3] # Convert image to OpenCV format
+        return frame 
+    
+    def set_wheel_velocities(self,left_wheel_vel, right_wheel_vel):
+        """
+        Sets angular velocities for the robot's wheels in PyBullet.
+        
+        Args:
+            left_wheel_vel (float): Left wheel angular velocity (rad/s).
+            right_wheel_vel (float): Right wheel angular velocity (rad/s).
+            
+        """
+        # Set velocities using VELOCITY_CONTROL
+        p.setJointMotorControl2(
+            self.robot_id,
+            self.wheel_indices['left'],
+            p.VELOCITY_CONTROL,
+            targetVelocity=left_wheel_vel,
+            force=100
+        )
+        p.setJointMotorControl2(
+            self.robot_id,
+            self.wheel_indices['right'],
+            p.VELOCITY_CONTROL,
+            targetVelocity=right_wheel_vel,
+            force=100
+        )
+
+
+
+
+
+
+
+
+
+
+
+
+    #OLD FUNCTIONS for the quadruped robot 
     def get_foot_link_indices(self):
         """Find and return the link indices for the robot's feet."""
         foot_names = ["FR_foot", "FL_foot", "RR_foot", "RL_foot"]
@@ -263,3 +356,5 @@ class A1Simulation:
                 controlMode=p.TORQUE_CONTROL,
                 force=torques[i]
             )    
+    
+          
