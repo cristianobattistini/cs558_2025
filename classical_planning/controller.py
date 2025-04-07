@@ -26,9 +26,9 @@ class Controller:
         self.wheel_separation = 0.28 
         
         # PID gains
-        self.Kp = np.array([0.4, 0.4])  # [distance, theta]
+        self.Kp = np.array([1.2, 1.2])  # [distance, theta]
         self.Ki = np.array([0, 0])
-        self.Kd = np.array([0.2, 0.1])
+        self.Kd = np.array([0.4, 0.4])
         self.prev_error = np.zeros(2)
         self.integral_error = np.zeros(2)
         
