@@ -179,9 +179,8 @@ def run_rrt_star(start_conf, goal_conf, obstacles, maze_bounds, robot_dims,
         
         # Check if new_node is near the goal.
         if math.dist(new_node.conf[:2], goal_conf[:2]) < goal_threshold:
-            print("[RRT*] Goal reached!")
+            print("Goal reached!")
             return extract_path(new_node)
             
-    print("[RRT*] Failed to find a path.")
     return None
 

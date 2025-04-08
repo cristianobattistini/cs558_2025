@@ -119,11 +119,14 @@ class A1Simulation:
 
     def create_maze(self, rows=10, cols=10, cell_size=1.2):
         """Use MazeGenerator to build maze and reset robot at start position."""
+        
         maze = MazeGenerator(rows=rows, cols=cols, cell_size=cell_size)
         start_pos, end_pos, obstacles = maze.create_simplified_maze()
-
-        self.reset_robot()
-        self.teleport_robot([start_pos[0], start_pos[1], 0.3])
+        # Visualize start (green sphere) and goal (red sphere)
+        start_vis = p.createVisualShape(p.GEOM_SPHERE, radius=0.2, rgbaColor=[0, 1, 0, 1])
+        goal_vis  = p.createVisualShape(p.GEOM_SPHERE, radius=0.2, rgbaColor=[1, 0, 0, 1])
+        p.createMultiBody(baseVisualShapeIndex=start_vis, basePosition=[start_pos[0], start_pos[1], 0.2])
+        p.createMultiBody(baseVisualShapeIndex=goal_vis,  basePosition=[end_pos[0], end_pos[1], 0.2])
 
         return start_pos, end_pos, obstacles
     
@@ -150,7 +153,7 @@ class A1Simulation:
             self.step_simulation(steps=5)
 
 
-    def visualize_path(self, path, color=[1, 0, 0], line_width=2.0, z_offset=0.02):
+    def visualize_path(self, path, color=[1, 0, 0], line_width=4.5, z_offset=0.02):
         """
         Draws a series of red line segments connecting each waypoint in 'path'.
 
