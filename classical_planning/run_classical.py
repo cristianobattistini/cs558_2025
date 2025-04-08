@@ -11,22 +11,22 @@ def main():
     parser = argparse.ArgumentParser(description='Controller simulation')
     
     # Add arguments 
-    parser.add_argument('--controller', choices=['pid', 'mpc'], default='pid',help="Controller type: 'pid' or 'mpc' (default: pid)")
     parser.add_argument('--visualization', dest='visual',action='store_false',help="Disable visualization")
     parser.add_argument('--sim_step', type=float,default=1./100.,help="Simulation step size (default: 0.01)")
-    
+    parser.add_argument('--robot', choices=['roomba', 'a1'], default='roomba',help="Robot type: 'roomba' or 'a1' (default: roomba)")
+                        
     # Parse and save the arguments
     args = parser.parse_args()
     if not hasattr(args, 'visual'):
         args.visualization = True
 
-    controller = args.controller
     visual = args.visual
     step = args.sim_step
+    robot = args.robot
 
     # Initialize simulation
     dt = step
-    sim = A1Simulation(gui=visual, time_step=step)
+    sim = A1Simulation(gui=visual, time_step=step, robot=robot)
 
     # Create obstacles
     rows=10
@@ -81,7 +81,7 @@ def main():
     sim.step_simulation(10)
 
     # Initialize controller
-    pid = Controller(dt, control_type=controller,) 
+    controller = Controller(dt, robot=robot) 
     print("\n---------------------------------------------\n")
     print("Controller initialized, starting simulation...")
     print("\n---------------------------------------------")
@@ -106,7 +106,7 @@ def main():
             current_state = np.array([x, y, theta, left_wheel_vel, right_wheel_vel])
 
             #Apply PID control
-            left_wheel_vel, right_wheel_vel = pid.compute_control(current_state, desired_state)
+            left_wheel_vel, right_wheel_vel = controller.compute_control(current_state, desired_state)
 
             # Log data
             x_vals.append(x)

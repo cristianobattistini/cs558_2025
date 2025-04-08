@@ -10,7 +10,7 @@ import cv2
 
 
 class A1Simulation:
-    def __init__(self, gui=True, plane="plane.urdf", time_step=1. / 240. ):
+    def __init__(self, gui=True, plane="plane.urdf", time_step=1. / 240. , robot="roomba"):
         """Initialize PyBullet simulation with or without GUI."""
 
         # Start PyBullet in GUI (Visuals on) or Direct mode (Visuals off)
@@ -28,7 +28,7 @@ class A1Simulation:
         p.setAdditionalSearchPath(os.path.join(current_dir, '../assets/a1')) 
 
         self.plane_id = self.load_plane(plane)          # Load a plane (Currently it is the most basic)
-        self.robot_id = self.load_robot(current_dir)    # Load the A1 quadruped robot 
+        self.robot_id = self.load_robot(current_dir,robot)    # Load the A1 quadruped robot 
 
         # Set the simulation parameters
         p.setGravity(0, 0, -9.81)   # Gravity
@@ -45,9 +45,12 @@ class A1Simulation:
         plane_urdf = os.path.join(pybullet_data.getDataPath(), plane)
         return p.loadURDF(plane_urdf)
     
-    def load_robot(self, current_dir, start_pos=[0, 0, 0.3]):
+    def load_robot(self, current_dir,robot,  start_pos=[0, 0, 0.3]):
         """Load the A1 quadruped robot."""
-        urdf = os.path.join(current_dir, '../assets/a1/urdf/roomba.urdf')  # Path to the A1 URDF
+        if robot == "a1":
+            urdf = os.path.join(current_dir, '../assets/a1/urdf/a1.urdf')
+        else:
+            urdf = os.path.join(current_dir, '../assets/a1/urdf/roomba.urdf')  # Path to the A1 URDF
         return p.loadURDF(urdf, basePosition=start_pos)
 
     def step_simulation(self, steps=1):
