@@ -26,7 +26,7 @@ class Controller:
         self.wheel_separation = 0.28 
         
         # PID gains
-        self.Kp = np.array([1.2, 1.2])  # [distance, theta]
+        self.Kp = np.array([1.2, 2.4])  # [distance, theta]
         self.Ki = np.array([0, 0])
         self.Kd = np.array([0.4, 0.4])
         self.prev_error = np.zeros(2)
@@ -51,7 +51,7 @@ class Controller:
         Returns:
             tuple: (left_wheel_vel, right_wheel_vel) in rad/s.
         """
-        # v = 1 # Constant linear velocity
+        # Inverse kinematics for differential drive robot
         left_wheel_vel = (v - omega * self.wheel_separation / 2) / self.wheel_radius
         right_wheel_vel = (v + omega * self.wheel_separation / 2) / self.wheel_radius
         return left_wheel_vel, right_wheel_vel
@@ -100,7 +100,7 @@ class Controller:
         v = np.clip(v, -max_vel, max_vel)
 
         # Convert to wheel velocities
-        left_wheel_vel, right_wheel_vel = self.roomba_inverse_kinematics(v, omega)
+        left_wheel_vel, right_wheel_vel = self.roomba_inverse_kinematics(0.82, omega)
 
         return (left_wheel_vel, right_wheel_vel)
     
@@ -119,7 +119,6 @@ class Controller:
         if self.robot == 'roomba':
             return self.pid_control(desired_state, current_state)
         elif self.robot == 'a1':
-            # For MPC, desired_state should be a trajectory (horizon x 3)
             if desired_state.ndim == 1:
                 desired_trajectory = np.tile(desired_state, (self.horizon, 1))
             else:

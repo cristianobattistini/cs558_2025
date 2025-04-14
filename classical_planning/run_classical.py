@@ -127,16 +127,41 @@ def main():
             sim.step_simulation()
 
 
-    # Plot the results
+   # Plot the results
+    print("\n---------------------------------------------\n")
+    print("Simulation Finished! Generating Graphs...")
+    print("\n---------------------------------------------")
+   # Compute linear velocity (Euclidean distance / dt)
+    x_vals = np.array(x_vals)
+    y_vals = np.array(y_vals)
+    t_vals = np.array(t_vals)
+
+    dx = np.diff(x_vals)
+    dy = np.diff(y_vals)
+    dt = np.diff(t_vals)
+    velocity = np.sqrt(dx**2 + dy**2) / dt
+    t_velocity = t_vals[1:]  # align with the diff arrays
+
+    # Original position plot
     plt.figure()
     plt.plot(t_vals, x_vals, label='x')
     plt.plot(t_vals, y_vals, label='y')
     plt.plot(t_vals, desired_x_vals, label='desired x', linestyle='--')
     plt.plot(t_vals, desired_y_vals, label='desired y', linestyle='--')
-    plt.legend()
     plt.xlabel('Time [s]')
     plt.ylabel('Position [m]')
     plt.title('x and y over time')
+    plt.legend()
+    plt.grid()
+    plt.show()
+
+    # New velocity plot
+    print("Average velocity: ", np.mean(velocity))
+    plt.figure()
+    plt.plot(t_velocity, velocity, label='Linear Velocity', color='purple')
+    plt.xlabel('Time [s]')
+    plt.ylabel('Velocity [m/s]')
+    plt.title('Linear velocity over time')
     plt.legend()
     plt.grid()
     plt.show()
