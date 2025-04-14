@@ -2,7 +2,7 @@ import pybullet as p
 import pybullet_data
 import time
 import os
-from maze_generator import MazeGenerator
+from classical_planning.maze_generator import MazeGenerator
 import numpy as np
 import math
 from scipy.spatial.transform import Rotation as R

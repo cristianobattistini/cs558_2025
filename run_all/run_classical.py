@@ -1,8 +1,15 @@
-from environment import *
-from controller import *
-from rtt_star_path_planner import run_rrt_star 
+import sys
+import os
 import matplotlib.pyplot as plt
 import argparse
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from utils.environment import *
+from classical_planning.controller import *
+from classical_planning.rtt_star_path_planner import run_rrt_star 
+
+
 
 def main():
 
@@ -142,7 +149,7 @@ def main():
     velocity = np.sqrt(dx**2 + dy**2) / dt
     t_velocity = t_vals[1:]  # align with the diff arrays
 
-    # Original position plot
+    # Position plot
     plt.figure()
     plt.plot(t_vals, x_vals, label='x')
     plt.plot(t_vals, y_vals, label='y')
@@ -155,8 +162,7 @@ def main():
     plt.grid()
     plt.show()
 
-    # New velocity plot
-    print("Average velocity: ", np.mean(velocity))
+    # Velocity plot
     plt.figure()
     plt.plot(t_velocity, velocity, label='Linear Velocity', color='purple')
     plt.xlabel('Time [s]')
