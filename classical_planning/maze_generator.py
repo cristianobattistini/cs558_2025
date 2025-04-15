@@ -112,82 +112,48 @@ class MazeGenerator:
 
     def create_simplified_maze(self):
         """
-        Create a simplified maze by placing multiple block obstacles.
-        The obstacles are arranged in two parallel rows, creating a corridor 
-        in the middle that the robot must navigate through or around.
+        Create a simplified maze by randomly placing block obstacles in two parallel rows.
+        The obstacles are randomly distributed along the x-axis in each row,
+        creating a corridor in the middle that the robot must navigate through or around.
         
         Returns:
-            Tuple[List[float], List[float], List[int]]: 
+            Tuple[List[float], List[float], List[int]]:
                 (start_pos, goal_pos, obstacle_ids)
         """
         # Clear any previously stored obstacles
         self.obstacle_ids = []
 
-        # For best results, pick a cell_size that’s wide enough for your robot
-        # (e.g., 1.0 or 1.2 if your robot trunk is ~0.2 m wide).
-        # We'll define two rows of blocks: top row (y = +1 * cell_size), bottom row (y = -1 * cell_size).
-        # That leaves a corridor in the middle (y ~ 0).
+        # Define two rows for obstacles:
+        # Using row offsets to separate the obstacles above and below the corridor.
+        row_offsets = [self.cell_size, -self.cell_size]
 
-        # You can adjust how many blocks and how far in x they go.
-        block_positions = [
-            # Row +2
-            [self.cell_size * 2,  self.cell_size * 2, self.wall_height / 2],
-            [self.cell_size * 5,  self.cell_size * 2, self.wall_height / 2],
+        # Define a set of discrete x positions for potential obstacle placement.
+        # Here we choose positions from 2 to 7 (multiplied by cell_size) so that obstacles lie between the start and goal.
+        possible_x = [self.cell_size * i for i in range(2, 8)]  # x positions: 2,3,4,5,6,7 times cell_size
 
-            [self.cell_size * 2,  0, self.wall_height / 2],
-            [self.cell_size * 4,  0, self.wall_height / 2],
-            [self.cell_size * 6,  0, self.wall_height / 2],
+        # For each row, randomly select a few obstacle positions.
+        for row in row_offsets:
+            # Determine randomly how many obstacles to place in this row (e.g., 2 or 3 blocks)
+            num_obs = random.randint(2, 3)
+            # Randomly sample from the available x positions without replacement.
+            x_positions = random.sample(possible_x, num_obs)
+            # Optionally sort them for left-to-right ordering.
+            x_positions.sort()
+            
+            # Create an obstacle for each selected x position.
+            for x in x_positions:
+                pos = [x, row, self.wall_height / 2]  # place the block so it rests on the ground
+                size = [self.cell_size / 2, self.cell_size / 2, self.wall_height / 2]
+                col_shape = p.createCollisionShape(p.GEOM_BOX, halfExtents=size)
+                vis_shape = p.createVisualShape(p.GEOM_BOX, halfExtents=size, rgbaColor=[0.7, 0.7, 0.7, 1])
+                body_id = p.createMultiBody(baseMass=0,
+                                            baseCollisionShapeIndex=col_shape,
+                                            baseVisualShapeIndex=vis_shape,
+                                            basePosition=pos)
+                self.obstacle_ids.append(body_id)
 
-            [self.cell_size * 2, -self.cell_size * 2, self.wall_height / 2],
-            [self.cell_size * 4, -self.cell_size * 2, self.wall_height / 2],
-        ]
-
-
-
-        for pos in block_positions:
-            size = [self.cell_size / 2, self.cell_size / 2, self.wall_height / 2]
-            col_shape = p.createCollisionShape(p.GEOM_BOX, halfExtents=size)
-            vis_shape = p.createVisualShape(p.GEOM_BOX, halfExtents=size, rgbaColor=[0.7, 0.7, 0.7, 1])
-            body_id = p.createMultiBody(baseMass=0,
-                                        baseCollisionShapeIndex=col_shape,
-                                        baseVisualShapeIndex=vis_shape,
-                                        basePosition=pos)
-            self.obstacle_ids.append(body_id)
-
-        # Place the start on the left side of the corridor and the goal on the right.
-        # Adjust if you want them closer/farther from the blocks.
+        # Set the start on the left side of the corridor and the goal on the right.
         start_pos = [0, 0, 0.3]
-        goal_pos  = [self.cell_size * 7.5, 0, 0.3]  # a bit beyond the last blocks
+        goal_pos  = [self.cell_size * 7.5, 0, 0.3]  # placed a bit beyond the last obstacles
 
         return start_pos, goal_pos, self.obstacle_ids
-
-
-
-
-'''
-
-        block_positions = [
-            # Row +2
-            [self.cell_size * 2,  self.cell_size * 2, self.wall_height / 2],
-            [self.cell_size * 5,  self.cell_size * 2, self.wall_height / 2],
-
-            # Row +1
-            # [self.cell_size * 3,  self.cell_size * 1, self.wall_height / 2],
-            # [self.cell_size * 6,  self.cell_size * 1, self.wall_height / 2],
-
-            # Row 0 (center line)
-            [self.cell_size * 2,  0, self.wall_height / 2],
-            [self.cell_size * 4,  0, self.wall_height / 2],
-            [self.cell_size * 6,  0, self.wall_height / 2],
-
-            # Row -1
-            # [self.cell_size * 3, -self.cell_size * 1, self.wall_height / 2],
-            # [self.cell_size * 5, -self.cell_size * 1, self.wall_height / 2],
-
-            # Row -2
-            [self.cell_size * 2, -self.cell_size * 2, self.wall_height / 2],
-            [self.cell_size * 4, -self.cell_size * 2, self.wall_height / 2],
-        ]
-
-
-'''
