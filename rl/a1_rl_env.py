@@ -42,62 +42,49 @@ class A1GymEnv(gym.Env):
 
 
     def step(self, action):
-        # 1) Azione scalata per evitare output troppo piccoli
+        # 1) Scaled action to avoid excessively small outputs
         scaled_action = action * 3.0
         self.sim.set_wheel_velocities(scaled_action[0], scaled_action[1])
         self.sim.step_simulation(steps=10)
 
-        # 2) Stato attuale dal simulatore
+        # 2) Current state from the simulator
         state = self.sim.get_base_state()
         x, y, theta = state[0], state[1], state[2]
 
-        # 3) Calcolo velocità lineare nel piano (x_dot, y_dot)
+        # 3) Compute linear velocity in the plane (x_dot, y_dot)
         pos_now = np.array([x, y])
         vel = (pos_now - self.last_position) / (self.sim.time_step * 10)
         x_dot, y_dot = vel[0], vel[1]
         self.last_position = pos_now
 
-        # 4) Costruzione observation da restituire
+        # 4) Build observation to return
         observation = np.array([x, y, theta, x_dot, y_dot, self.goal[0], self.goal[1]], dtype=np.float32)
 
-        # 5) Calcolo reward con shaping
+        # 5) Compute reward with shaping
         distance = np.linalg.norm(pos_now - self.goal)
         delta_distance = self.prev_distance - distance
         speed = np.sqrt(x_dot**2 + y_dot**2)
 
-        # Esempio di metodo per collisioni (da implementare):
+        # Example of collision method (to be implemented):
         collision = self.check_collision() if hasattr(self, 'check_collision') else False
 
         reward = 0.0
+        reward = -distance                     # (a) Distance penalty  
+        reward += 0.2 * delta_distance         # (b) Bonus for getting closer  
+        reward += 0.05 * speed                 # (c) Bonus for movement  
+        reward -= 0.01                         # (d) Time penalty per step  
+        reward -= 10 if collision else 0       # (e) Collision penalty  
+        reward += 100 if distance < self.goal_threshold else 0  # (f) Goal reached bonus
 
-        # (a) penalità distanza
-        reward += -distance
 
-        # (b) bonus avvicinamento
-        reward += 0.2 * delta_distance
-
-        # (c) bonus velocità per non stare fermi
-        reward += 0.05 * speed
-
-        # (d) penalità tempo per ogni step
-        reward -= 0.01
-
-        # (e) penalità collisione
-        if collision:
-            reward -= 10
-
-        # (f) bonus goal
-        if distance < self.goal_threshold:
-            reward += 100
-
-        # Salva la distanza per la prossima iterazione
+        # Save the distance for the next iteration
         self.prev_distance = distance
 
-        # 6) Controllo terminazione
+        # 6) Check termination
         terminated = distance < self.goal_threshold
         truncated = self.current_step >= 1000
         if terminated:
-            # Se vuoi, potresti anche resettare qualcosa qui
+            # If needed, you could reset something here
             pass
 
         self.current_step += 1
