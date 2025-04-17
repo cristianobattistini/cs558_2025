@@ -98,7 +98,7 @@ class A1GymEnv(gym.Env):
 
         # 6. Termination conditions
         terminated = distance < self.goal_threshold
-        truncated = self.current_step >= 1000  # Max episode length
+        truncated = self.current_step >= 3000  # Max episode length
 
         self.current_step += 1
         info = {}

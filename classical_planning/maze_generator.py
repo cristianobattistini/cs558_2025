@@ -110,7 +110,7 @@ class MazeGenerator:
         return self.get_world_position(start_cell), self.get_world_position(end_cell), self.obstacle_ids
     
 
-    def create_simplified_maze(self):
+    #def create_simplified_maze(self):
         """
         Create a simplified maze by randomly placing block obstacles in two parallel rows.
         The obstacles are randomly distributed along the x-axis in each row,
@@ -120,7 +120,7 @@ class MazeGenerator:
             Tuple[List[float], List[float], List[int]]:
                 (start_pos, goal_pos, obstacle_ids)
         """
-        #"""
+        """
         # Clear any previously stored obstacles
         self.obstacle_ids = []
 
@@ -160,12 +160,12 @@ class MazeGenerator:
         return start_pos, goal_pos, self.obstacle_ids
         #"""
 
-   # def create_simplified_maze(self):
+    def create_simplified_maze(self):
         """
         Create a denser maze by placing smaller block obstacles in multiple rows along the y-direction.
         Obstacles are scattered along the x-axis and multiple y rows, making a denser corridor-like passage.
         """
-    """    self.obstacle_ids = []
+        self.obstacle_ids = []
 
         # Use a denser y-grid: rows from -2.5 to 2.5 in steps of cell_size
         num_y_layers = 10  # number of rows in y-direction
@@ -193,4 +193,4 @@ class MazeGenerator:
         start_pos = [0, 0, 0.3]
         goal_pos  = [self.cell_size * 7.5, 0, 0.3]
 
-        return start_pos, goal_pos, self.obstacle_ids    """
+        return start_pos, goal_pos, self.obstacle_ids    

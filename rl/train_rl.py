@@ -30,12 +30,13 @@ model.save("ppo_model_500k_1604250900")
 model = PPO.load("ppo_model_500k_1604250900")
 obs = env.reset()
 done = False
+truncated = False
 x_vals = []
 y_vals = []
 
-while not done:
+while not done or not truncated:
     action, _states = model.predict(obs, deterministic=True)
-    obs, reward, done, info = env.step(action)
+    obs, reward, done, truncated, info = env.step(action)
     x_vals.append(obs[0][0])  # DummyVecEnv adds batch dimension
     y_vals.append(obs[0][1])
 
