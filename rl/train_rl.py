@@ -22,31 +22,16 @@ env = DummyVecEnv([
 
 # Initialize and train the PPO agent
 model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=log_dir)
-model.learn(total_timesteps=500000)
-model.save("ppo_model_500k_1604250900")
-
-
-# ===== Evaluating the Trained Agent =====
-model = PPO.load("ppo_model_500k_1604250900")
-obs = env.reset()
-done = False
-truncated = False
-x_vals = []
-y_vals = []
-
-while not done or not truncated:
-    action, _states = model.predict(obs, deterministic=True)
-    obs, reward, done, truncated, info = env.step(action)
-    x_vals.append(obs[0][0])  # DummyVecEnv adds batch dimension
-    y_vals.append(obs[0][1])
-
-plt.figure()
-plt.plot(x_vals, y_vals, marker='o', label='RL Agent Path')
-plt.xlabel('X Position')
-plt.ylabel('Y Position')
-plt.title('Trajectory of RL Agent')
-plt.legend()
-plt.grid(True)
-plt.show()
+"""
+If not specified, two layer of 64 neurons are created, with increased lidar dimension a higher number of neurons could be usefull 
+    model = PPO(
+    "MlpPolicy", 
+    env,
+    policy_kwargs=dict(net_arch=[128, 128]),  # 2 hidden layers, 128 neurons each
+    verbose=1
+)
+"""
+model.learn(total_timesteps=10000)
+model.save("ppo_model_10k")
 
 env.close()
