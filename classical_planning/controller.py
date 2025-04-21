@@ -24,6 +24,7 @@ class Controller:
         # Robot parameters (from URDF)
         self.wheel_radius = 0.03  
         self.wheel_separation = 0.28 
+
         
         # PID gains
         self.Kp = np.array([1.2, 2.4])  # [distance, theta]
@@ -54,6 +55,7 @@ class Controller:
         # Inverse kinematics for differential drive robot
         left_wheel_vel = (v - omega * self.wheel_separation / 2) / self.wheel_radius
         right_wheel_vel = (v + omega * self.wheel_separation / 2) / self.wheel_radius
+
         return left_wheel_vel, right_wheel_vel
     
     

@@ -19,7 +19,7 @@ def main():
     
     # Add arguments 
     parser.add_argument('--visualization', dest='visual',action='store_false',help="Disable visualization")
-    parser.add_argument('--sim_step', type=float,default=1./100.,help="Simulation step size (default: 0.01)")
+    parser.add_argument('--sim_step', type=float,default=1./240.,help="Simulation step size (default: 0.01)")
     parser.add_argument('--robot', choices=['roomba', 'a1'], default='roomba',help="Robot type: 'roomba' or 'a1' (default: roomba)")
                         
     # Parse and save the arguments
@@ -39,7 +39,7 @@ def main():
     rows=10
     cols=10
     cell_size=1.2
-    start_pos, goal_pos, obstacles = sim.create_maze()
+    start_pos, goal_pos, obstacles = sim.create_maze(use_obstacles=True)
 
     # Define start and goal configurations as (x, y, theta)
     start_conf = (start_pos[0], start_pos[1], 0)
@@ -80,8 +80,7 @@ def main():
         print("No valid RRT* path found.")
 
    
-    sim.reset_robot()
-    sim.teleport_robot([0,0,0.5])    
+    sim.reset_robot([start_pos[0], start_pos[1], 0.3])
     print("\n---------------------------------------------\n")
     print("Robot teleported to initial position, stepping simulation and starting controller...")
     print("\n---------------------------------------------")

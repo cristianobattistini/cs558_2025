@@ -62,9 +62,9 @@ class A1Simulation:
                 time.sleep(self.time_step)  # Only sleep if using GUI to sync real-time movement
 
 
-    def reset_robot(self):
+    def reset_robot(self,pos):
         """Reset robot position and velocity."""
-        p.resetBasePositionAndOrientation(self.robot_id, [0, 0, 0.3], [0, 0, 0, 1])
+        p.resetBasePositionAndOrientation(self.robot_id, pos, [0, 0, 0, 1])
         num_joints = p.getNumJoints(self.robot_id)
         for i in range(num_joints):
             p.resetJointState(self.robot_id, i, targetValue=0, targetVelocity=0)
@@ -121,11 +121,11 @@ class A1Simulation:
         return
 
 
-    def create_maze(self, rows=10, cols=10, cell_size=1.2):
+    def create_maze(self, use_obstacles,rows=10, cols=10, cell_size=1.2):
         """Use MazeGenerator to build maze and reset robot at start position."""
         
         maze = MazeGenerator(rows=rows, cols=cols, cell_size=cell_size)
-        start_pos, end_pos, obstacles = maze.create_simplified_maze()
+        start_pos, end_pos, obstacles = maze.create_simplified_maze(use_obstacles)
         # Visualize start (green sphere) and goal (red sphere)
         start_vis = p.createVisualShape(p.GEOM_SPHERE, radius=0.2, rgbaColor=[0, 1, 0, 1])
         goal_vis  = p.createVisualShape(p.GEOM_SPHERE, radius=0.2, rgbaColor=[1, 0, 0, 1])

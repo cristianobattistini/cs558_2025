@@ -1,0 +1,3 @@
+conda create --name env_name python=3.10
+condo activate env_name
+conda install -c conda-forge pybullet gymnasium numpy matplotlib stable-baselines3 opencv scipy tensorboard
