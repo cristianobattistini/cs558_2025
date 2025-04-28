@@ -14,7 +14,7 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 # 1) DummyVecEnv
 eval_env = DummyVecEnv([lambda: A1GymEnv(use_obstacles=False, robot='roomba', sim_step=1./240., cell_size=1.2, gui=True)])
 
-model = PPO.load("ppo_model_580k_no_obstacles")
+model = PPO.load("ppo_model_1000k_no_obstacles")
 
 obs = eval_env.reset()  # shape (1, obs_dim)
 done = [False]

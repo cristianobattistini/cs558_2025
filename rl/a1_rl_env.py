@@ -106,7 +106,7 @@ class A1GymEnv(gym.Env):
         # print("Time penalty: ", -0.01)
         # print("\n")
         reward += 30 * delta_distance   # Incentive for progress towards goal
-        reward += 0.009 * speed          # Reward high speeds
+        reward += 0.06 * speed          # Reward high speeds
         #reward -= 0.01 * distance       # Penalty to discourage wandering
         #reward -= 0.01                  # Time penalty to encourage faster episodes
         #if distance < 3:

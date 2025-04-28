@@ -314,10 +314,12 @@ class A1Simulation:
         # Fire rays all at once, returns a list of all rays with a tuple of information for each 
         results = p.rayTestBatch(ray_from, ray_to) 
         distances = [hit[2] for hit in results]  # results[i][2] is the distance in a 0-1 scale, to denormalize max_range * hit[2]
+        
         """ For debugging purposes you can visualize the rays
         if self.gui:  # Only visualize if GUI is enabled
             for i in range(num_rays):
                 p.addUserDebugLine(ray_from[i], ray_to[i], lineColorRGB=[1, 0, 0], lifeTime=0.1)"""
+        #distances = np.ones(18) # 
         return np.array(distances, dtype=np.float32)
 
 
