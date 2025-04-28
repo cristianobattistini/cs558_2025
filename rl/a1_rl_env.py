@@ -21,10 +21,10 @@ class A1GymEnv(gym.Env):
 
         # Define observation space:
         self.lidar_dim = 18
-        # [x, y, θ, ẋ, ẏ, goal_x, goal_y, LIDAR_measurement*lidar_dim]
+        # [x, y, θ, goal_x, goal_y, LIDAR_measurement*lidar_dim]
         # The first seven values are unbounded, while the LIDAR measurements are bounded by lidar_range but are normalized for better training
-        obs_low = np.array([-np.inf] * 7 + [0] * self.lidar_dim)  
-        obs_high = np.array([np.inf] * 7 + [1] * self.lidar_dim)  
+        obs_low = np.array([-np.inf] * 5 + [0] * self.lidar_dim)  
+        obs_high = np.array([np.inf] * 5 + [1] * self.lidar_dim)  
         self.observation_space = spaces.Box(low=obs_low, high=obs_high, dtype=np.float32)
 
         # Threshold for goal-reaching
@@ -55,14 +55,14 @@ class A1GymEnv(gym.Env):
         state = self.sim.get_base_state()
         lidar_scan = self.sim.get_lidar_scan(num_rays=self.lidar_dim) 
         x, y, theta = state[0], state[1], state[2]
-        observation_without_lidar = np.array([x, y, theta, 0.0, 0.0, goal_pos[0], goal_pos[1]], dtype=np.float32)
+        observation_without_lidar = np.array([x, y, theta, goal_pos[0], goal_pos[1]], dtype=np.float32)
         observation = np.concatenate([observation_without_lidar, lidar_scan])
 
         # Store goal and reset counters
         self.goal = np.array([goal_pos[0], goal_pos[1]], dtype=np.float32)
         self.last_position = np.array([x, y])
         self.current_step = 0
-        self.prev_distance = np.linalg.norm(self.last_position - self.goal)
+        self.prev_distance = np.sqrt((self.goal[0]-x)**2 + (self.goal[1]-y)**2) 
 
         return observation, {}
 
@@ -81,27 +81,40 @@ class A1GymEnv(gym.Env):
 
         # 3. Compute estimated linear velocity (x_dot, y_dot)
         pos_now = np.array([x, y])
-        vel = (pos_now - self.last_position) / (self.sim.time_step * 10)
+        vel = (pos_now - self.last_position) / self.sim.time_step
         x_dot, y_dot = vel[0], vel[1]
         self.last_position = pos_now
 
         # 4. Construct the observation
-        observation_without_lidar = np.array([x, y, theta, x_dot, y_dot, self.goal[0], self.goal[1]], dtype=np.float32)
+        observation_without_lidar = np.array([x, y, theta, self.goal[0], self.goal[1]], dtype=np.float32)
         observation = np.concatenate([observation_without_lidar, lidar_scan])
         
 
         # 5. Compute reward using shaping
-        distance = np.linalg.norm(pos_now - self.goal)
+        distance_x = self.goal[0] - pos_now[0]
+        distance_y = self.goal[1] - pos_now[1]
+        distance = np.sqrt(distance_x**2 + distance_y**2)
         delta_distance = self.prev_distance - distance
         speed = np.sqrt(x_dot**2 + y_dot**2)
 
-        # Check for collision
         
+        # Compute reward
         reward = 0.0
-        reward -=  0.0001 * distance           # Penalize distance to goal
-        reward += 0.5 * delta_distance          # Encourage getting closer
-        reward += 0.5 * speed                # Encourage speed
-        reward -= 0.00005                        # Time penalty
+        # print("Delta distance: ", 30*delta_distance)
+        # print("Speed: ", 0.01*speed)
+        # print("Distance: ", distance)
+        # print("Time penalty: ", -0.01)
+        # print("\n")
+        reward += 30 * delta_distance   # Incentive for progress towards goal
+        reward += 0.009 * speed          # Reward high speeds
+        #reward -= 0.01 * distance       # Penalty to discourage wandering
+        #reward -= 0.01                  # Time penalty to encourage faster episodes
+        #if distance < 3:
+            #reward += 5 * (1 - (distance / 3) ** 2)  # Peaks at 10 when distance=0
+                
+            #print("Distance reward: ", 10 * (1 - (distance / 3) ** 2))
+
+        # Check for collision
         if self.use_obstacles:
             collision = self.sim.check_collision_roomba(self.obstacle_ids)
             min_lidar_distance = np.min(lidar_scan)
@@ -110,13 +123,13 @@ class A1GymEnv(gym.Env):
             if collision:
                 reward -= 10                     # Collision penalty
         if distance < self.goal_threshold:
-            reward += 300                   # Goal reward
+            reward += 3000                   # Goal reward
 
         self.prev_distance = distance
 
         # 6. Termination conditions
         terminated = distance < self.goal_threshold
-        truncated = self.current_step >= 12000  # Max episode length. Since step is 1/240 and each
+        truncated = self.current_step >= 6000  # Max episode length. Since step is 1/240 and each
                                               # trainig step is 1 sim steps, this is 50 seconds.
 
         self.current_step += 1

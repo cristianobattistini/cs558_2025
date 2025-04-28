@@ -1,5 +1,6 @@
 import pybullet as p
 import random
+from numpy import sin, cos, pi
 class MazeGenerator:
     def __init__(self, rows=10, cols=10, cell_size=0.4, seed=None):
         """
@@ -50,10 +51,20 @@ class MazeGenerator:
                                                 basePosition=pos)
                     self.obstacle_ids.append(body_id)
 
-        # Keep same start and goal positions (robot needs to zigzag through the denser field)
+        """
         random_start = self.cell_size * random.randint(-3, 3)
         random_end = self.cell_size * random.randint(-3, 3)
         start_pos = [0, random_start, 0.3]
         goal_pos  = [self.cell_size * 7.5, random_end, 0.3]
+        """
+        random_start = self.cell_size * random.randint(-3, 3)
+        start_pos = [0, random_start, 0.3]
+
+        # Generate goal position at a random angle around start, radius = self.cell_size * 7.5
+        radius = self.cell_size * 7.5
+        theta = random.uniform(0, 2 * pi)
+        goal_x = start_pos[0] + radius * cos(theta)
+        goal_y = start_pos[1] + radius * sin(theta)
+        goal_pos = [goal_x, goal_y, 0.3]
 
         return start_pos, goal_pos, self.obstacle_ids    
