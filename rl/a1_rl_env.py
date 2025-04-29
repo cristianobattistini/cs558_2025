@@ -105,14 +105,19 @@ class A1GymEnv(gym.Env):
         # print("Distance: ", distance)
         # print("Time penalty: ", -0.01)
         # print("\n")
-        reward += 30 * delta_distance   # Incentive for progress towards goal
+        reward += 50 * delta_distance   # Incentive for progress towards goal
         reward += 0.009 * speed          # Reward high speeds
         #reward -= 0.01 * distance       # Penalty to discourage wandering
-        #reward -= 0.01                  # Time penalty to encourage faster episodes
+        reward -= 0.1                 # Time penalty to encourage faster episodes
         #if distance < 3:
             #reward += 5 * (1 - (distance / 3) ** 2)  # Peaks at 10 when distance=0
                 
             #print("Distance reward: ", 10 * (1 - (distance / 3) ** 2))
+
+        # --- New bearing reward ---
+        bearing_error = (np.arctan2(distance_y, distance_x) - theta + np.pi) % (2 * np.pi) - np.pi
+        bearing_reward = np.cos(bearing_error)  # +1 when facing goal
+        reward += 0.1 * bearing_reward          # Tune the scaling factor
 
         # Check for collision
         if self.use_obstacles:
@@ -123,7 +128,7 @@ class A1GymEnv(gym.Env):
             if collision:
                 reward -= 10                     # Collision penalty
         if distance < self.goal_threshold:
-            reward += 3000                   # Goal reward
+            reward += 5000                   # Goal reward
 
         self.prev_distance = distance
 

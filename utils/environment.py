@@ -121,11 +121,11 @@ class A1Simulation:
         return
 
 
-    def create_maze(self, use_obstacles,rows=10, cols=10, cell_size=1.2):
+    def create_maze(self, use_obstacles, random_goal=True, rows=10, cols=10, cell_size=1.2):
         """Use MazeGenerator to build maze and reset robot at start position."""
         
         maze = MazeGenerator(rows=rows, cols=cols, cell_size=cell_size)
-        start_pos, end_pos, obstacles = maze.create_simplified_maze(use_obstacles)
+        start_pos, end_pos, obstacles = maze.create_simplified_maze(use_obstacles, random_goal)
         # Visualize start (green sphere) and goal (red sphere)
         start_vis = p.createVisualShape(p.GEOM_SPHERE, radius=0.2, rgbaColor=[0, 1, 0, 1])
         goal_vis  = p.createVisualShape(p.GEOM_SPHERE, radius=0.2, rgbaColor=[1, 0, 0, 1])
@@ -283,41 +283,42 @@ class A1Simulation:
         raise ValueError("LiDAR link not found in URDF!")
     
     def get_lidar_scan(self, num_rays=18, max_range=2.0):
-        """
-        Simulate a 360° LiDAR scan using raycasting.
+        # """
+        # Simulate a 360° LiDAR scan using raycasting.
         
-        Args:
-            num_rays (int): Number of rays (360 for 1° resolution).
-            max_range (float): Maximum detection range (meters).
+        # Args:
+        #     num_rays (int): Number of rays (360 for 1° resolution).
+        #     max_range (float): Maximum detection range (meters).
         
-        Returns:
-            np.array: Array of distances (one per ray). Shape: (num_rays,).
-        """
-        # Get LiDAR position/orientation
-        lidar_state = p.getLinkState(self.robot_id, self.lidar_link_index)
-        lidar_pos = lidar_state[0]  # World position [x, y, z]
+        # Returns:
+        #     np.array: Array of distances (one per ray). Shape: (num_rays,).
+        # """
+        # # Get LiDAR position/orientation
+        # lidar_state = p.getLinkState(self.robot_id, self.lidar_link_index)
+        # lidar_pos = lidar_state[0]  # World position [x, y, z]
         
-        # Prepare ray directions (360° in XY plane)
-        ray_from = []
-        ray_to = []
-        for i in range(num_rays):
-            angle = 2 * np.pi * i / num_rays  
-            ray_dir = np.array([np.cos(angle), np.sin(angle), 0])  # Unit vector
-            ray_from.append(lidar_pos)
-            ray_to.append([
-                lidar_pos[0] + ray_dir[0] * max_range,
-                lidar_pos[1] + ray_dir[1] * max_range,
-                lidar_pos[2] + ray_dir[2] * max_range
-            ])
+        # # Prepare ray directions (360° in XY plane)
+        # ray_from = []
+        # ray_to = []
+        # for i in range(num_rays):
+        #     angle = 2 * np.pi * i / num_rays  
+        #     ray_dir = np.array([np.cos(angle), np.sin(angle), 0])  # Unit vector
+        #     ray_from.append(lidar_pos)
+        #     ray_to.append([
+        #         lidar_pos[0] + ray_dir[0] * max_range,
+        #         lidar_pos[1] + ray_dir[1] * max_range,
+        #         lidar_pos[2] + ray_dir[2] * max_range
+        #     ])
 
-        # Cast rays and measure distances
-        # Fire rays all at once, returns a list of all rays with a tuple of information for each 
-        results = p.rayTestBatch(ray_from, ray_to) 
-        distances = [hit[2] for hit in results]  # results[i][2] is the distance in a 0-1 scale, to denormalize max_range * hit[2]
-        """ For debugging purposes you can visualize the rays
-        if self.gui:  # Only visualize if GUI is enabled
-            for i in range(num_rays):
-                p.addUserDebugLine(ray_from[i], ray_to[i], lineColorRGB=[1, 0, 0], lifeTime=0.1)"""
+        # # Cast rays and measure distances
+        # # Fire rays all at once, returns a list of all rays with a tuple of information for each 
+        # results = p.rayTestBatch(ray_from, ray_to) 
+        # distances = [hit[2] for hit in results]  # results[i][2] is the distance in a 0-1 scale, to denormalize max_range * hit[2]
+        # """ For debugging purposes you can visualize the rays
+        # if self.gui:  # Only visualize if GUI is enabled
+        #     for i in range(num_rays):
+        #         p.addUserDebugLine(ray_from[i], ray_to[i], lineColorRGB=[1, 0, 0], lifeTime=0.1)"""
+        distances = np.ones(18)
         return np.array(distances, dtype=np.float32)
 
 

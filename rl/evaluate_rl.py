@@ -14,7 +14,7 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 # 1) DummyVecEnv
 eval_env = DummyVecEnv([lambda: A1GymEnv(use_obstacles=False, robot='roomba', sim_step=1./240., cell_size=1.2, gui=True)])
 
-model = PPO.load("ppo_model_580k_no_obstacles")
+model = PPO.load("ppo_model_9999k_no_obstacles")
 
 obs = eval_env.reset()  # shape (1, obs_dim)
 done = [False]
@@ -22,7 +22,7 @@ x_vals, y_vals = [], []
 total_reward = 0
 
 while not done[0]:
-    action, _ = model.predict(obs, deterministic=True)  # shape (1, act_dim)
+    action, _ = model.predict(obs, deterministic=False)  # shape (1, act_dim)
     obs, rewards, done, trunc = eval_env.step(action)   # obs shape (1, obs_dim)
     total_reward += rewards[0]
     x_vals.append(obs[0][0])

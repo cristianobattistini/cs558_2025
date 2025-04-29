@@ -39,7 +39,7 @@ def main():
     rows=10
     cols=10
     cell_size=1.2
-    start_pos, goal_pos, obstacles = sim.create_maze(use_obstacles=True)
+    start_pos, goal_pos, obstacles = sim.create_maze(use_obstacles=True, random_goal=False)
 
     # Define start and goal configurations as (x, y, theta)
     start_conf = (start_pos[0], start_pos[1], 0)

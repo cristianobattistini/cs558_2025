@@ -22,27 +22,25 @@ class MazeGenerator:
             random.seed(seed)
 
 
-    def create_simplified_maze(self,use_obstacles):
+    def create_simplified_maze(self, use_obstacles, random_goal=True):
         """
         Create a denser maze by placing smaller block obstacles in multiple rows along the y-direction.
         Obstacles are scattered along the x-axis and multiple y rows, making a denser corridor-like passage.
+        The goal can either be placed randomly around a radius or directly in front of the robot.
         """
         self.obstacle_ids = []
+        
         if use_obstacles:
-            # Use a denser y-grid: rows from -2.5 to 2.5 in steps of cell_size
-            num_y_layers = 10  # number of rows in y-direction
+            num_y_layers = 10
             y_offsets = [self.cell_size * (i - num_y_layers // 2) for i in range(num_y_layers)]
-
-            # Same x-range as before, not extending in x
             possible_x = [self.cell_size * i for i in range(2, 8)]
 
             for y in y_offsets:
-                # For each y-row, randomly choose more x positions to place small obstacles
-                num_obs = random.randint(2, 6)  # Obstacles per row
+                num_obs = random.randint(2, 6)
                 x_positions = random.sample(possible_x, num_obs)
                 for x in x_positions:
                     pos = [x, y, self.wall_height / 2]
-                    size = [self.cell_size / 4.5, self.cell_size / 4.5, self.wall_height / 2]  # smaller blocks
+                    size = [self.cell_size / 4.5, self.cell_size / 4.5, self.wall_height / 2]
                     col_shape = p.createCollisionShape(p.GEOM_BOX, halfExtents=size)
                     vis_shape = p.createVisualShape(p.GEOM_BOX, halfExtents=size, rgbaColor=[0.7, 0.7, 0.7, 1])
                     body_id = p.createMultiBody(baseMass=0,
@@ -51,20 +49,22 @@ class MazeGenerator:
                                                 basePosition=pos)
                     self.obstacle_ids.append(body_id)
 
-        """
-        random_start = self.cell_size * random.randint(-3, 3)
-        random_end = self.cell_size * random.randint(-3, 3)
-        start_pos = [0, random_start, 0.3]
-        goal_pos  = [self.cell_size * 7.5, random_end, 0.3]
-        """
+        # Start position
         random_start = self.cell_size * random.randint(-3, 3)
         start_pos = [0, random_start, 0.3]
 
-        # Generate goal position at a random angle around start, radius = self.cell_size * 7.5
-        radius = self.cell_size * 7.5
-        theta = random.uniform(0, 2 * pi)
-        goal_x = start_pos[0] + radius * cos(theta)
-        goal_y = start_pos[1] + radius * sin(theta)
+        if random_goal:
+            # Goal in a random direction around the start
+            radius = self.cell_size * 5.0
+            theta = random.uniform(0, 2 * pi)
+            goal_x = start_pos[0] + radius * cos(theta)
+            goal_y = start_pos[1] + radius * sin(theta)
+        else:
+            # Goal in front of the robot
+            random_end = self.cell_size * random.randint(-3, 3)
+            goal_x = self.cell_size * 7.5
+            goal_y = random_end
+
         goal_pos = [goal_x, goal_y, 0.3]
 
-        return start_pos, goal_pos, self.obstacle_ids    
+        return start_pos, goal_pos, self.obstacle_ids

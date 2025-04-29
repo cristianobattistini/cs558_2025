@@ -17,11 +17,11 @@ os.makedirs(log_dir, exist_ok=True)
 
 ## SET TRAINING PARAMETERS, AUTO MODEL NAME SAVER
 use_obstacles = False
-total_timesteps = 3000000
+total_timesteps = 9999999
 model_name = f"ppo_model_{int(total_timesteps/1000)}k_no_obstacles" if not use_obstacles else f"ppo_model_{int(total_timesteps/1000)}k_with_obstacles"
 
 load_existing_model = False  # Set to True to load an existing model
-pretrained_model_path = "ppo_model_480k_no_obstacles"  # Path to the pretrained model
+pretrained_model_path = "ppo_model_1000k_no_obstacles"  # Path to the pretrained model
 
 # Wrap environment with Monitor and DummyVecEnv
 env = DummyVecEnv([
@@ -44,11 +44,17 @@ else:
         verbose=1,
         tensorboard_log=log_dir,
         device="cuda",
-        n_steps=18000,       # Total timesteps collected before each training phase 3600
-        batch_size =500,     # Batch size for training (use a multiple of 64 ideally)
-        n_epochs=10,         # Number of passes over the rollout data
-        policy_kwargs=dict(net_arch=[128, 128])  # 2 hidden layers, 128 neurons each
+        n_steps=4096,              # Smaller, more frequent rollouts
+        batch_size=1024,           # A quarter of n_steps
+        n_epochs=10,               # Keep 10 for now
+        learning_rate=3e-4,        # More aggressive updates
+        gamma=0.98,                # Slightly less long-term oriented
+        gae_lambda=0.95,           # Keep for now
+        clip_range=0.2,            # Standard
+        ent_coef=0.01,             # Encourage exploration
+        policy_kwargs=dict(net_arch=[128, 128])  # Slightly wider network
     )
+
 
     model.learn(total_timesteps=total_timesteps)
 
