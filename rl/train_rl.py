@@ -4,6 +4,8 @@ import numpy as np
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.buffers import ReplayBuffer
+from stable_baselines3.common.pretrain import pretrain
 from a1_rl_env import A1GymEnv
 import matplotlib.pyplot as plt
 
@@ -31,12 +33,12 @@ env = DummyVecEnv([
 if load_existing_model:
     if not os.path.exists(pretrained_model_path + ".zip"):
         raise FileNotFoundError(f"Pretrained model {pretrained_model_path} not found")
-    print(f"Loading pretrained model {pretrained_model_path}")
+    print("\nLoading pretrained model ", pretrained_model_path, "\n")
     model = PPO.load(pretrained_model_path, env=env, device="cuda")
     model.set_env(env)  # Ensure the environment is properly set
     model.learn(total_timesteps=total_timesteps, reset_num_timesteps=True) 
 else:
-    print("Creating a new model")
+    print("\nCreating a new model\n")
     # Initialize and train the PPO agent
     model = PPO(
         "MlpPolicy",
@@ -53,6 +55,25 @@ else:
         clip_range=0.2,            # Standard
         ent_coef=0.01,             # Encourage exploration
         policy_kwargs=dict(net_arch=[128, 128])  # Slightly wider network
+        #policy_kwargs=dict(net_arch=[128, 128])  # 2 hidden layers, 128 neurons each
+    )
+
+    ## PRETRAININ USING BC
+    expert_data_path = "expert_data.npy"  # Path to saved expert data
+    # Load expert data
+    expert_data = np.load("expert_data.npy", allow_pickle=True)
+    observations = np.array([d[0] for d in expert_data])
+    actions = np.array([d[1] for d in expert_data])
+
+    # Pretrain the policy
+    pretrain(
+        model,
+        observations,
+        actions,
+        n_epochs=100,  # Adjust based on performance
+        batch_size=64,
+        learning_rate=1e-4,
+        verbose=1
     )
 
 
